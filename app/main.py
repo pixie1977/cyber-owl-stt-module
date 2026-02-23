@@ -8,8 +8,7 @@ import uvicorn
 
 from app.core.httpd import app, stt_engine, message_queue
 from app.config.config import STT_HOST, STT_PORT, STT_LOG_LEVEL
-from app.utils.stt_utils import start_listening, set_event_loop
-
+from app.utils.stt_utils import start_listening, set_event_loop, text_callback
 
 if __name__ == "__main__":
     # Устанавливаем цикл событий
@@ -19,7 +18,7 @@ if __name__ == "__main__":
     set_event_loop(loop)
 
     # Запускаем прослушивание
-    start_listening(stt_engine, message_queue)
+    start_listening(stt_engine, message_queue, text_callback)
 
     # Запускаем сервер
     config = uvicorn.Config(app=app, host=STT_HOST, port=STT_PORT, log_level=STT_LOG_LEVEL, loop=loop)

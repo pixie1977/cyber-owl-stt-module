@@ -9,6 +9,8 @@ import threading
 from asyncio import Queue
 from typing import Callable, Dict, Optional
 
+from app.config.config import STT_URL_TO_TEXT_TRANSMIT
+from app.core.client import PostClient
 from app.core.speech_to_text import Speech2Text
 
 
@@ -107,6 +109,40 @@ def run_stt_listener(
         listening_active = False
 
 
+async def send_text_to_server(text: str) -> None:
+    """
+    Асинхронно отправляет распознанный текст на удалённый сервер.
+
+    :param text: текст для отправки.
+    """
+    async with PostClient(STT_URL_TO_TEXT_TRANSMIT) as client:
+        await client.post(text=text)
+
+
+def text_callback(text: str) -> None:
+    """
+    Колбэк, вызываемый при распознавании фразы.
+    Отправляет текст на удалённый сервер в фоне.
+
+    :param text: распознанный текст.
+    """
+    if not text.strip() or not STT_URL_TO_TEXT_TRANSMIT:
+        return
+
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    if loop.is_running():
+        # Если цикл уже работает — планируем задачу
+        asyncio.run_coroutine_threadsafe(send_text_to_server(text), loop)
+    else:
+        # Иначе запускаем отдельно (в тестах или вне сервера)
+        asyncio.run(send_text_to_server(text))
+
+
 def start_listening(
     stt_engine: Speech2Text,
     queue: Queue,
@@ -126,7 +162,7 @@ def start_listening(
 
     thread = threading.Thread(
         target=run_stt_listener,
-        args=(stt_engine, queue, on_result_callback),
+        args=(stt_engine, queue, on_result_callback or text_callback),
         daemon=True,
     )
     thread.start()
