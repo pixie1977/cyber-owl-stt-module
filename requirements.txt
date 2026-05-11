@@ -4,3 +4,4 @@ python-dotenv==1.2.1
 sounddevice==0.5.2
 uvicorn==0.41.0
 vosk==0.3.45
+aiohttp
